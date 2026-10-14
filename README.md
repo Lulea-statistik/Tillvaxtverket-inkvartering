@@ -86,7 +86,7 @@ och gruppering med upprepade `dimension=`-parametrar. Därför behöver workflow
 
 ## Interaktiv webbplats
 
-`index.html` visar motsvarande huvudvyer som Power BI-rapporten: Start, Enskilda år, Över flera år, Procentuell utveckling, Antalsutveckling och Månad 1–3 samt Metod & data. Filen läser `data/history.csv` direkt och fungerar med statisk GitHub Pages-publicering från repo-roten.
+`docs/index.html` visar motsvarande huvudvyer som Power BI-rapporten: Start, Enskilda år, Över flera år, Procentuell utveckling, Antalsutveckling och Månad 1–3 samt Metod & data. Filen läser `docs/data/history.csv` (automatiskt synkroniserad från `data/history.csv`) direkt och fungerar med statisk GitHub Pages-publicering från `docs/`.
 
 ### Årsdata
 
@@ -94,7 +94,7 @@ och gruppering med upprepade `dimension=`-parametrar. Därför behöver workflow
 
 ### Publicering
 
-GitHub Pages behöver vara aktiverat under **Settings → Pages → Deploy from a branch → main → /(root)**. Sidan publiceras därefter normalt på https://lulea-statistik.github.io/Tillvaxtverket-inkvartering/ .
+GitHub Pages behöver vara aktiverat under **Settings → Pages → Deploy from a branch → main → /docs**. Sidan publiceras därefter normalt på https://lulea-statistik.github.io/Tillvaxtverket-inkvartering/ .
 
 ### Källkritik
 
