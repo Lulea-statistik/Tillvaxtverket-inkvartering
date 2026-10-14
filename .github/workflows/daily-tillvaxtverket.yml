@@ -43,11 +43,14 @@ jobs:
           REQUIRE_START_YEAR: "1"
         run: python scrape_tillvaxtverket.py
 
+      - name: Build annual totals from monthly data
+        run: python build_annual.py
+
       - name: Commit changed data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/history.csv data/latest.csv data/revisions.csv
+          git add data/history.csv data/latest.csv data/revisions.csv data/annual.csv
 
           if git diff --cached --quiet; then
             echo "No data changes. Nothing to commit."
