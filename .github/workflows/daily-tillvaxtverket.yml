@@ -46,11 +46,16 @@ jobs:
       - name: Build annual totals from monthly data
         run: python build_annual.py
 
+      - name: Refresh published dashboard data
+        run: |
+          mkdir -p docs/data
+          cp data/history.csv docs/data/history.csv
+
       - name: Commit changed data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/history.csv data/latest.csv data/revisions.csv data/annual.csv
+          git add data/history.csv data/latest.csv data/revisions.csv data/annual.csv docs/data/history.csv
 
           if git diff --cached --quiet; then
             echo "No data changes. Nothing to commit."
