@@ -82,3 +82,20 @@ filter:AR:gte=2010
 ```
 
 och gruppering med upprepade `dimension=`-parametrar. Därför behöver workflowen inte ladda ned hela Sveriges dataset vid varje kontroll.
+
+
+## Interaktiv webbplats
+
+`index.html` visar motsvarande huvudvyer som Power BI-rapporten: Start, Enskilda år, Över flera år, Procentuell utveckling, Antalsutveckling och Månad 1–3 samt Metod & data. Filen läser `data/history.csv` direkt och fungerar med statisk GitHub Pages-publicering från repo-roten.
+
+### Årsdata
+
+`build_annual.py` skriver `data/annual.csv` med en rad per år och hemland. Den körs av det befintliga dagliga arbetsflödet efter API-hämtningen. Kolumnerna `Manader_i_underlaget` och `Komplett_ar` används för att förhindra att ofullständiga år behandlas som helår. Årsfilen är **summerad månadsstatistik**, inte separat verifierad årsstatistik från myndighetens årsserie. En separat avstämning mot officiell årsstatistik återstår.
+
+### Publicering
+
+GitHub Pages behöver vara aktiverat under **Settings → Pages → Deploy from a branch → main → /(root)**. Sidan publiceras därefter normalt på https://lulea-statistik.github.io/Tillvaxtverket-inkvartering/ .
+
+### Källkritik
+
+Den uppladdade Excel-ZIP-filen innehåller komplett årstäckning för 2019–2025 men också en felmärkt fil (`1990 januari.xlsx`, med september 2025 som faktisk period) samt 2026-filer som redovisar grupperade månader. GitHub-arkivets eget API-utdrag i `data/history.csv` används därför som huvudkälla. Ländernas världsdelar i webbvyn är en preliminär manuell klassificering och ska kvalitetssäkras innan filtreringen betraktas som fullständig.
