@@ -17,6 +17,15 @@
 body{font-family:var(--font-body)}
 h1,h2,h3,h4,h5,h6,a,nav a{font-family:var(--font-heading)}
 button,input,select,textarea,table{font-family:var(--font-body)}
+/* Gemensam diagramdesign: bättre luft, kontrast, läsbarhet och skärpa. */
+.panel{border-color:#dce5ef;padding:22px;box-shadow:0 4px 16px rgba(25,47,75,.045)}
+.panel h3{color:#24364e;font-size:16px;letter-spacing:-.015em;font-weight:700;margin-bottom:15px}
+.panel .chart{isolation:isolate}
+.country-bar-scroll{border-radius:7px;padding:4px 8px 3px 0}
+.season-chart-scroll{border-color:#dbe4ef;box-shadow:inset 0 0 0 1px rgba(255,255,255,.65)}
+.m2-legend-item{border-color:#dae4ef;transition:background .14s ease,border-color .14s ease}
+.m2-legend-item:hover{background:#f4f8fc;border-color:#9ab6d2}
+@media(max-width:760px){.panel{padding:16px}.panel h3{font-size:15px}.country-bar-scroll{max-height:500px}}
 /* Egen blågrön färg för Antalsutveckling, övriga vyer oförändrade. */
 .nav button.active[data-page="delta"]{background:#087d89;color:#fff;border-color:#087d89}
 </style><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script></head><body>
@@ -120,7 +129,76 @@ document.addEventListener('pointerdown',event=>{
 });
 function fullYear(y,unfiltered){return new Set(unfiltered.filter(r=>r.y===y).map(r=>r.m)).size===12}
 function collect(filtered,key){const out=new Map();filtered.forEach(r=>out.set(key(r),(out.get(key(r))||0)+r.n));return out}
-function chart(id,type,labels,datasets,extra={}){const palette=page==='delta'?['#087d89','#2764a6','#8a99b5']:['#b43646','#274f99','#c89a3b'];charts[id]?.destroy();const base={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:datasets.length>1},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(ctx.parsed.y??ctx.parsed.x)}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>fmt(v)}},x:{grid:{display:false}}}};charts[id]=new Chart($(id),{type,data:{labels,datasets:datasets.map((d,i)=>({borderColor:palette[i%3],backgroundColor:type==='line'?palette[i%3]+'30':palette[i%3],borderWidth:2,tension:.25,fill:type==='line',...d}))},options:{...base,...extra}})}
+// Uniform visual language for all Chart.js charts; preserve page-specific scales,
+// series colors (Månad 3 / Säsong) and custom tooltips.
+function chart(id,type,labels,datasets,extra={}){
+  const horizontal=extra.indexAxis==='y';
+  const palette=page==='delta'?['#087d89','#2764a6','#8a99b5']:['#ae4059','#356991','#bc914f'];
+  const font="'Inter',system-ui,-apple-system,'Segoe UI',sans-serif";
+  Chart.defaults.font.family=font;
+  Chart.defaults.font.size=12;
+  Chart.defaults.color='#52647c';
+  charts[id]?.destroy();
+  const tickFont={family:font,size:11.5,weight:'500'};
+  const tickBase={color:'#576980',font:tickFont,padding:10,maxTicksLimit:7};
+  const lightGrid={color:'rgba(142,163,188,0.19)',drawTicks:false,lineWidth:1};
+  const xBase=horizontal?
+    {beginAtZero:true,grace:id==='bar'?'12%':undefined,grid:lightGrid,border:{display:false},ticks:{...tickBase,callback:v=>fmt(v)}}:
+    {grid:{display:false,drawTicks:false},border:{display:false},ticks:{...tickBase,autoSkip:true,maxRotation:0,maxTicksLimit:12}};
+  const yBase=horizontal?
+    {grid:{display:false,drawTicks:false},border:{display:false},ticks:{...tickBase,autoSkip:false,font:{...tickFont,size:11.5},callback:function(v){const label=this.getLabelForValue(v);return label.length>28?label.slice(0,27)+'…':label;}}}:
+    {beginAtZero:true,grace:id==='monthly'?'13%':undefined,grid:lightGrid,border:{display:false},ticks:{...tickBase,callback:v=>fmt(v)}};
+  const base={
+    responsive:true,maintainAspectRatio:false,
+    // 2x rendering keeps text and bar edges clear on ordinary laptop monitors.
+    devicePixelRatio:Math.min(2.25,Math.max(2,window.devicePixelRatio||1)),
+    animation:{duration:220,easing:'easeOutQuart'},
+    interaction:{mode:'nearest',intersect:type==='bar'},
+    layout:{padding:{top:12,right:13,bottom:5,left:5}},
+    plugins:{
+      legend:{display:datasets.length>1,position:'bottom',labels:{font:{family:font,size:11.5,weight:'500'},color:'#344a64',boxWidth:13,boxHeight:9,padding:15,usePointStyle:true,pointStyle:'rectRounded'}},
+      tooltip:{backgroundColor:'#182942',titleColor:'#ffffff',bodyColor:'#eaf0f8',titleFont:{family:font,size:12,weight:'700'},bodyFont:{family:font,size:12},padding:12,cornerRadius:9,caretSize:6,borderColor:'rgba(190,211,235,.22)',borderWidth:1,displayColors:datasets.length>1,callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(horizontal?ctx.parsed.x:ctx.parsed.y)}}
+    },
+    scales:{x:xBase,y:yBase}
+  };
+  // Deep-merge only nested Chart.js settings, so a page-specific tooltip or
+  // scale override doesn't discard the shared fonts, padding and grid styling.
+  const mergeAxis=(defaultAxis,override={})=>({
+    ...defaultAxis,...override,
+    grid:{...(defaultAxis.grid||{}),...(override.grid||{})},
+    border:{...(defaultAxis.border||{}),...(override.border||{})},
+    ticks:{...(defaultAxis.ticks||{}),...(override.ticks||{}),font:{...(defaultAxis.ticks?.font||{}),...(override.ticks?.font||{})}},
+    ...(override.title?{title:{...(defaultAxis.title||{}),...override.title}}:{})
+  });
+  const opt={
+    ...base,...extra,
+    plugins:{
+      ...base.plugins,...(extra.plugins||{}),
+      legend:{...base.plugins.legend,...(extra.plugins?.legend||{}),labels:{...base.plugins.legend.labels,...(extra.plugins?.legend?.labels||{})}},
+      tooltip:{...base.plugins.tooltip,...(extra.plugins?.tooltip||{}),callbacks:{...base.plugins.tooltip.callbacks,...(extra.plugins?.tooltip?.callbacks||{})}}
+    },
+    scales:{
+      x:mergeAxis(base.scales.x,extra.scales?.x),
+      y:mergeAxis(base.scales.y,extra.scales?.y)
+    }
+  };
+  const styled=datasets.map((d,i)=>({
+    ...(type==='bar'?{
+      backgroundColor:palette[i%palette.length],borderColor:palette[i%palette.length],
+      borderWidth:0,borderSkipped:false,borderRadius:6,
+      maxBarThickness:horizontal?19:36,categoryPercentage:.79,barPercentage:.88
+    }:{
+      borderColor:palette[i%palette.length],
+      backgroundColor:palette[i%palette.length]+'24',
+      borderWidth:2.6,fill:false,spanGaps:false,tension:.24,
+      pointRadius:labels.length>24?0:2.3,pointHoverRadius:5,pointHitRadius:12,
+      pointBorderWidth:1.8,pointBorderColor:d.borderColor||palette[i%palette.length],
+      pointBackgroundColor:'#fff',borderCapStyle:'round',borderJoinStyle:'round'
+    }),...d
+  }));
+  charts[id]=new Chart($(id),{type,data:{labels,datasets:styled},options:opt});
+}
+
 // Country ranking uses the selected period and continent independently of Hemland.
 function aggregate(ignoreMonth=false,completeYearsOnly=false){
   const country=$('country').value,cont=$('continent').value,from=+$('from').value,to=+$('to').value,month=+$('month').value,top=+$('topFilter').value;
@@ -165,7 +243,7 @@ if(page==='m3'){
     const age=Math.abs(currentYear-y);
     const opacity=0.12+0.88*Math.exp(-0.16*age);
     const color=y===currentYear?'#000000':'rgba(32,84,147,'+opacity.toFixed(3)+')';
-    return {label:String(y),data:monthLabels.map((_,j)=>monthlyTotals.has(y+'-'+(j+1))?monthlyTotals.get(y+'-'+(j+1)):null),borderColor:color,backgroundColor:color,borderWidth:y===currentYear?6:2,fill:false,spanGaps:false,pointRadius:y===currentYear?4:2,pointHoverRadius:5};
+    return {label:String(y),data:monthLabels.map((_,j)=>monthlyTotals.has(y+'-'+(j+1))?monthlyTotals.get(y+'-'+(j+1)):null),borderColor:color,backgroundColor:color,borderWidth:y===currentYear?6:2,fill:false,spanGaps:false,pointRadius:y===currentYear?4:1.6,pointHoverRadius:5};
   });
   $('lineTitle').textContent='Gästnätter per månad – ett år per linje';
   chart('line','line',monthLabels,yearLines,{interaction:{mode:'nearest',intersect:false},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(ctx.parsed.y)}}}});
@@ -174,18 +252,23 @@ if(page==='m3'){
   const countryAreas=byCountry.map(([country],i)=>{
     const hue=Math.round((i*137.508)%360);
     const borderColor='hsl('+hue+',65%,37%)';
-    const backgroundColor='hsla('+hue+',70%,49%,0.75)';
-    return {label:country,data:months.slice(1).map((_,j)=>{const key=country+'|'+(j+1);return monthlyByCountry.has(key)?monthlyByCountry.get(key):null}),borderColor,backgroundColor,borderWidth:1.3,pointRadius:0,pointHoverRadius:3,fill:true,spanGaps:false,tension:0.12};
+    const backgroundColor='hsla('+hue+',60%,46%,0.60)';
+    return {label:country,data:months.slice(1).map((_,j)=>{const key=country+'|'+(j+1);return monthlyByCountry.has(key)?monthlyByCountry.get(key):null}),borderColor,backgroundColor,borderWidth:1,pointRadius:0,pointHoverRadius:4,fill:true,spanGaps:false,tension:0.14};
   });
   $('lineTitle').textContent='Månadsjämförelse per hemland – staplat areadiagram';
   chart('line','line',months.slice(1),countryAreas,{interaction:{mode:'nearest',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(ctx.parsed.y)+' gästnätter'}}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,stacked:true,ticks:{callback:v=>fmt(v)}}}});
   renderM2Legend(countryAreas);
 }else{
   $('lineTitle').textContent=isPct?'Årlig förändring (%)':isDelta?'Årlig förändring (antal gästnätter)':isMonths?'Gästnätter över tiden':'Gästnätter per år';
-  chart('line',isPct||isDelta?'bar':'line',xYears.map(String),[{label:isPct?'Förändring, %':isDelta?'Förändring, antal':'Gästnätter',data:values}]);
+  chart('line',isPct||isDelta?'bar':'line',xYears.map(String),[{
+    label:isPct?'Förändring, %':isDelta?'Förändring, antal':'Gästnätter',
+    data:values,
+    ...((isPct||isDelta)?{backgroundColor:values.map(v=>v<0?'#bd6674':isDelta?'#087d89':'#356991'),maxBarThickness:32}:{}),
+  }],isPct?{scales:{y:{ticks:{callback:v=>fmt(v)+' %'}}},plugins:{tooltip:{callbacks:{label:ctx=>'Förändring: '+perc(ctx.parsed.y)}}}}:{});
+
 }
-const barLimit=+$('topFilter').value||12,barCountries=byCountry.slice(0,barLimit);$('countryBarChart').style.height=Math.max(430,barCountries.length*29+55)+'px';$('barTitle').textContent='Största hemländerna';chart('bar','bar',barCountries.map(x=>x[0]),[{label:'Gästnätter',data:barCountries.map(x=>x[1])}],{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:v=>fmt(v)}},y:{grid:{display:false}}}});
-$('monthTitle').textContent='Fördelning över kalenderåret';chart('monthly','bar',months.slice(1),[{label:'Gästnätter',data:Array.from({length:12},(_,i)=>byMonth.get(i+1)||0)}]);
+const barLimit=+$('topFilter').value||12,barCountries=byCountry.slice(0,barLimit);$('countryBarChart').style.height=Math.max(430,barCountries.length*30+60)+'px';$('barTitle').textContent='Största hemländerna';chart('bar','bar',barCountries.map(x=>x[0]),[{label:'Gästnätter',data:barCountries.map(x=>x[1]),backgroundColor:barCountries.map((_,i)=>i<3?'#a93752':'#c27486'),maxBarThickness:18}],{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:v=>fmt(v)}},y:{grid:{display:false}}}});
+$('monthTitle').textContent='Fördelning över kalenderåret';chart('monthly','bar',months.slice(1),[{label:'Gästnätter',data:Array.from({length:12},(_,i)=>byMonth.get(i+1)||0),backgroundColor:'#ae4059',maxBarThickness:35}]);
 $('tbody').innerHTML=years.map((y,i)=>{let v=byYear.get(y)||0,prev=byYear.get(y-1),diff=prev>0?perc((v/prev-1)*100):'—';return '<tr><td>'+y+(fullYear(y,rows)?'':' · delår')+'</td><td>'+fmt(v)+'</td><td>'+(fullYear(y,rows)&&fullYear(y-1,rows)?diff:'—')+'</td></tr>'}).join('');
 }
 
@@ -268,7 +351,7 @@ function renderSeason(){
     return 'rgba(43,106,145,'+opacity.toFixed(3)+')';
   });
   const plot=$('seasonChartSize');
-  plot.style.height=Math.max(320,ordered.length*27+65)+'px';
+  plot.style.height=Math.max(340,ordered.length*29+72)+'px';
   $('seasonChartNote').textContent='Alla '+fmt(countries.length)+' hemländer visas, sorterade från högsta till lägsta sommarandel. Varje stapel motsvarar ett land på en fast skala från 0 till 100 %. Staplarnas blå färg går från 50 % opacitet för lägsta sommarandel till 100 % för högsta. Rulla i diagrammet för att se alla.';
   chart('seasonChart','bar',ordered.map(e=>e.country),[{
     label:'Sommarandel (%)',
@@ -276,8 +359,10 @@ function renderSeason(){
     backgroundColor:barColors,
     borderColor:'#205677',
     borderWidth:0,
-    borderRadius:2,
-    barPercentage:0.84,
+    borderRadius:4,
+    borderSkipped:false,
+    maxBarThickness:17,
+    barPercentage:0.82,
     categoryPercentage:0.94
   }],{
     indexAxis:'y',
@@ -288,7 +373,7 @@ function renderSeason(){
     }}},
     scales:{
       x:{min:0,max:100,title:{display:true,text:'Sommarandel (%)'},grid:{color:'#e9edf3'},ticks:{stepSize:20,callback:v=>v+' %'}},
-      y:{grid:{display:false},ticks:{autoSkip:false,font:{size:11}}}
+      y:{grid:{display:false},ticks:{autoSkip:false,font:{size:11.5},callback:function(v){const label=this.getLabelForValue(v);return label.length>30?label.slice(0,29)+'…':label;}}}
     }
   });
   renderSeasonTable(countries);
@@ -426,5 +511,6 @@ function renderMap(data){
 function updateCountries(){const old=$('country').value,cont=$('continent').value;const arr=allCountries.filter(c=>!cont||classify(c)===cont).map(c=>[c,c]);options($('country'),[['','Alla länder'],['__EX_SWE__','Alla länder exklusive Sverige'],...arr],arr.some(x=>x[0]===old)?old:'');if(page==='m1')$('month').value=latestMonthInSelection();draw()}
 function reset(){$('mapView').value='sum';$('topFilter').value='0';worldSelectedKey=null;options($('continent'),[['','Alla världsdelar'],...Object.keys(groups).map(x=>[x,x]),['Övriga / ej klassificerade','Övriga / ej klassificerade']],'');options($('country'),[['','Alla länder'],['__EX_SWE__','Alla länder exklusive Sverige'],...allCountries.map(x=>[x,x])],'');$('from').value=yearSet[0];$('to').value=yearSet.at(-1);$('month').value=page==='m1'?latestMonthInSelection():'0';draw()}
 $('mapView').onchange=()=>{if(page==='map')renderMap(aggregate())};document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x===b));page=b.dataset.page;if(page==='m1')$('month').value=latestMonthInSelection();draw()});$('continent').onchange=updateCountries;['country','from','to','month','topFilter'].forEach(id=>$(id).onchange=()=>{if(+$('from').value>+$('to').value){if(id==='from')$('to').value=$('from').value;else $('from').value=$('to').value}if(page==='m1'&&id!=='month')$('month').value=latestMonthInSelection();draw()});$('reset').onclick=reset;
+if(document.fonts?.ready)document.fonts.ready.then(()=>Object.values(charts).forEach(c=>c.update('none')));
 fetch('data/history.csv?v=2').then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.text()}).then(text=>{const lines=text.trim().split(/\r?\n/),head=lines.shift().replace(/^\uFEFF/,'').split(','),ix=k=>head.indexOf(k);rows=lines.map(line=>{const p=line.split(',');return {y:+p[ix('Ar')],m:+p[ix('Manad')],c:p[ix('Hemland')],n:+p[ix('Gastnatter')]}}).filter(r=>r.y&&r.m&&r.c&&Number.isFinite(r.n));yearSet=[...new Set(rows.map(r=>r.y))].sort((a,b)=>a-b);allCountries=[...new Set(rows.map(r=>r.c))].sort((a,b)=>a.localeCompare(b,'sv'));options($('from'),yearSet.map(x=>[String(x),String(x)]),String(yearSet[0]));options($('to'),yearSet.map(x=>[String(x),String(x)]),String(yearSet.at(-1)));options($('month'),months.map((x,i)=>[String(i),x]),'0');$('status').classList.add('hidden');$('content').classList.remove('hidden');reset()}).catch(e=>{$('status').textContent='Kunde inte läsa data/history.csv: '+e.message+'. Kontrollera att webbplatsen körs via GitHub Pages.'});
 </script></body></html>
