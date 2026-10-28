@@ -28,6 +28,28 @@ button,input,select,textarea,table{font-family:var(--font-body)}
 .m2-legend-item{border-color:#dae4ef;transition:background .14s ease,border-color .14s ease}
 .m2-legend-item:hover{background:#f4f8fc;border-color:#9ab6d2}
 @media(max-width:760px){.panel{padding:16px}.panel h3{font-size:15px}.country-bar-scroll{max-height:500px}}
+
+/* Flödesanalys med interaktivt SVG och en gemensam fördelningspalett. */
+.multi-flow-scroll{overflow-x:auto;max-width:100%;border:1px solid #dce5f0;border-radius:10px;background:linear-gradient(180deg,#fbfdff,#fff);overscroll-behavior-x:contain}
+.multi-flow{min-width:100%;height:530px}
+.multi-flow svg{display:block;height:530px;font-family:'Inter',system-ui,sans-serif}
+.multi-flow .flow-band{opacity:.77;transition:opacity .16s ease;cursor:pointer}
+.multi-flow .flow-node{opacity:.97;cursor:pointer}
+.multi-flow .flow-band:hover,.multi-flow .flow-node:hover{opacity:1;filter:brightness(.93)}
+.multi-flow .flow-faded{opacity:.085!important}
+.multi-flow-legend{display:flex;flex-wrap:wrap;gap:7px 9px;margin:14px 0}
+.multi-flow-legend button{display:inline-flex;align-items:center;gap:7px;background:#fff;color:#263a56;border:1px solid #dbe3ee;border-radius:18px;padding:6px 10px;font-size:12px;cursor:pointer}
+.multi-flow-legend button[aria-pressed="true"]{background:#eef4fc;border-color:#7da8cf;font-weight:700}
+.multi-flow-legend .flow-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+.multi-mix-chart{height:410px}
+.multi-changes-scroll{max-height:610px;overflow:auto}
+#multiYearTable{min-width:950px;font-size:12.5px}
+#multiYearTable thead th{position:sticky;top:0;z-index:2;background:#f1f5fb;white-space:nowrap}
+#multiYearTable th button{border:0;background:transparent;color:#253a55;font-size:12px;font-weight:650;text-align:inherit;padding:6px 3px;cursor:pointer}
+#multiYearTable th button:hover{text-decoration:underline}
+#multiYearTable th:not(:first-child),#multiYearTable td:not(:first-child){text-align:right}
+#multiYearTable tbody tr:nth-child(even){background:#f8fafc}
+@media(max-width:760px){.multi-flow,.multi-flow svg{height:485px}.multi-mix-chart{height:360px}}
 /* Egen blågrön färg för Antalsutveckling, övriga vyer oförändrade. */
 .nav button.active[data-page="delta"]{background:#087d89;color:#fff;border-color:#087d89}
 </style><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script></head><body>
@@ -40,7 +62,25 @@ button,input,select,textarea,table{font-family:var(--font-body)}
 <div class="notice" id="quality"></div>
 <div class="kpis"><div class="kpi"><small>Gästnätter i urvalet</small><strong id="total">—</strong><span id="totalShare">Andel av samtliga gästnätter under vald period: —</span></div><div class="kpi"><small>Senaste hela år</small><strong id="latest">—</strong><span id="latestCount"></span></div><div class="kpi"><small>Förändring första–sista hela år</small><strong id="change">—</strong><span>Inte ett kausalt mått</span></div><div class="kpi"><small>Hemländer i urvalet</small><strong id="numCountries">—</strong><span>Med registrerade gästnätter</span></div></div>
 <div id="pageTitle"><h2>Översikt</h2></div>
-<div class="grid"><article class="panel wide hidden" id="mapPanel"><h3>Gästnätter i Luleå efter besökarnas hemland</h3><p id="mapDescription" class="mapnote">Färgen visar registrerade gästnätter per hemland i valt tidsintervall. Klicka på ett land för att markera dess gräns och visa värdet.</p><div class="map-view-controls"><label class="field" for="mapView">Visning<select id="mapView"><option value="sum">Summa</option><option value="mean">Medel</option><option value="pct">Procentuell utveckling</option><option value="delta">Antalsutveckling</option></select></label></div><p class="mapnote" id="mapPeriodNote"></p><div id="worldMap"></div><div class="maplegend" id="mapLegend">Färgskala: ljusrosa = färre gästnätter · mörkröd = fler gästnätter.</div><p class="mapnote" id="mapCoverage"></p></article><article class="panel wide" id="linePanel"><h3 id="lineTitle">Utländska gästnätter per år</h3><p id="m3LineNote" class="muted hidden">Äldre år visas i blått med successivt lägre opacitet. Innevarande år visas i svart med extra tjock linje. Saknade månader visas som luckor, inte som noll. Månadsfiltret är avstängt i denna vy.</p><p id="m1MonthNote" class="muted hidden"></p><p id="m2AreaNote" class="muted hidden">Staplat areadiagram med ett färgat område per hemlandskategori: januari–december summerat över valda år. Klicka på ett land nedanför diagrammet för att visa eller dölja det. Månadsfiltret är avstängt i denna vy. Saknade landsuppgifter visas inte som noll.</p><p id="partialYearNote" class="muted hidden" role="note"></p><div class="chart"><canvas id="line"></canvas></div><div id="m2Legend" class="m2-legend hidden" aria-label="Visa eller dölj hemländer i diagrammet"></div></article>
+<div class="grid"><article class="panel wide hidden" id="multiYearPanel">
+  <h3>Hemländernas utveckling – flödesdiagram</h3>
+  <p class="mapnote" id="multiYearNote">Flödesdiagrammet jämför endast hela kalenderår inom det valda intervallet.</p>
+  <div class="multi-flow-scroll" id="multiYearScroll" tabindex="0" aria-label="Flödesdiagram över hemländernas andelar per år">
+    <div id="multiYearFlow" class="multi-flow" role="img" aria-label="Alluvialt flödesdiagram för gästnätter efter hemland"></div>
+  </div>
+  <div id="multiYearLegend" class="multi-flow-legend" aria-label="Markera hemland i flödet"></div>
+  <p class="mapnote">Bandens tjocklek visar andel av gästnätterna, och höjdläget visar hemländernas ordning efter antal gästnätter. Banden är en visualisering av sammansättningen, inte faktiska personflöden mellan länder. Håll muspekaren över ett band eller markera ett land i förklaringen.</p>
+</article>
+<article class="panel wide hidden" id="multiMixPanel">
+  <h3>Hemländernas marknadsandelar – 100 % per år</h3>
+  <p class="mapnote">Varje års stapel summerar till 100 % av det aktuella urvalets gästnätter. De största hemländerna behåller samma färger som i flödet.</p>
+  <div class="chart multi-mix-chart"><canvas id="yearsMix"></canvas></div>
+</article>
+<article class="panel wide hidden" id="multiChangesPanel">
+  <h3>Förändrade placeringar och andelar</h3>
+  <p class="mapnote" id="multiTableNote">Jämförelse mellan första och sista kompletta kalenderåret.</p>
+  <div class="scroll multi-changes-scroll"><table id="multiYearTable"><thead><tr><th><button type="button" data-sort="country">Hemland</button></th><th><button type="button" data-sort="firstRank">Plats första året</button></th><th><button type="button" data-sort="lastRank">Plats sista året</button></th><th><button type="button" data-sort="rankDelta">Förändring i placering</button></th><th><button type="button" data-sort="firstShare">Andel första året</button></th><th><button type="button" data-sort="lastShare">Andel sista året</button></th><th><button type="button" data-sort="pp">Förändring (procentenheter)</button></th><th><button type="button" data-sort="lastGuests">Gästnätter sista året</button></th></tr></thead><tbody id="multiYearTableRows"></tbody></table></div>
+</article><article class="panel wide hidden" id="mapPanel"><h3>Gästnätter i Luleå efter besökarnas hemland</h3><p id="mapDescription" class="mapnote">Färgen visar registrerade gästnätter per hemland i valt tidsintervall. Klicka på ett land för att markera dess gräns och visa värdet.</p><div class="map-view-controls"><label class="field" for="mapView">Visning<select id="mapView"><option value="sum">Summa</option><option value="mean">Medel</option><option value="pct">Procentuell utveckling</option><option value="delta">Antalsutveckling</option></select></label></div><p class="mapnote" id="mapPeriodNote"></p><div id="worldMap"></div><div class="maplegend" id="mapLegend">Färgskala: ljusrosa = färre gästnätter · mörkröd = fler gästnätter.</div><p class="mapnote" id="mapCoverage"></p></article><article class="panel wide" id="linePanel"><h3 id="lineTitle">Utländska gästnätter per år</h3><p id="m3LineNote" class="muted hidden">Äldre år visas i blått med successivt lägre opacitet. Innevarande år visas i svart med extra tjock linje. Saknade månader visas som luckor, inte som noll. Månadsfiltret är avstängt i denna vy.</p><p id="m1MonthNote" class="muted hidden"></p><p id="m2AreaNote" class="muted hidden">Staplat areadiagram med ett färgat område per hemlandskategori: januari–december summerat över valda år. Klicka på ett land nedanför diagrammet för att visa eller dölja det. Månadsfiltret är avstängt i denna vy. Saknade landsuppgifter visas inte som noll.</p><p id="partialYearNote" class="muted hidden" role="note"></p><div class="chart"><canvas id="line"></canvas></div><div id="m2Legend" class="m2-legend hidden" aria-label="Visa eller dölj hemländer i diagrammet"></div></article>
 <article class="panel" id="barPanel"><h3 id="barTitle">Största hemländerna</h3><div class="country-bar-scroll"><div class="chart tall" id="countryBarChart"><canvas id="bar"></canvas></div></div></article>
 <article class="panel" id="monthPanel"><h3 id="monthTitle">Säsongsmönster per månad</h3><div class="chart tall"><canvas id="monthly"></canvas></div></article>
 <article class="panel wide" id="tablePanel"><h3>Tabell: urvalets utveckling</h3><div class="scroll"><table><thead><tr><th>År</th><th>Gästnätter</th><th>Förändring mot föregående år</th></tr></thead><tbody id="tbody"></tbody></table></div></article>
@@ -53,7 +93,7 @@ const groups={'Europa':'Norge,Finland,Tyskland,Storbritannien,Frankrike,Nederlä
 const classify=c=>Object.entries(groups).find(([_,a])=>a.includes(c))?.[0]||'Övriga / ej klassificerade';
 const fmt=n=>new Intl.NumberFormat('sv-SE',{maximumFractionDigits:0}).format(n);
 const perc=x=>Number.isFinite(x)?(x>=0?'+':'')+new Intl.NumberFormat('sv-SE',{maximumFractionDigits:1}).format(x)+' %':'—';
-const $=id=>document.getElementById(id);let rows=[],page='start',charts={},yearSet=[],allCountries=[],worldMap=null,worldLayer=null,worldFeatures=null,worldSelectedKey=null,seasonSort={key:'percent',direction:'desc'};
+const $=id=>document.getElementById(id);let rows=[],page='start',charts={},yearSet=[],allCountries=[],worldMap=null,worldLayer=null,worldFeatures=null,worldSelectedKey=null,seasonSort={key:'percent',direction:'desc'},multiSort={key:'pp',direction:'desc'},multiActiveCountry=null;
 function options(el,items,sel){el.innerHTML='';items.forEach(([value,name])=>{const o=document.createElement('option');o.value=value;o.textContent=name;el.append(o)});el.value=sel;if(el.id==='country')syncCountryPicker()}
 // Searchable country picker, shared by all site tabs. The hidden native select
 // remains the source of truth for existing country and continent filters.
@@ -260,7 +300,7 @@ $('total').textContent=fmt(selectedGuestNights);$('latest').textContent=complete
 $('quality').textContent='Månatlig statistik, senaste perioden kan vara preliminär. '+$('from').value+'–'+$('to').value+'.';
 const titles={start:'Översikt',years:'Över flera år',pct:'Procentuell utveckling',delta:'Antalsutveckling',m1:'Månad 1 – säsong',m2:'Månad 2 – månadsjämförelse',m3:'Månad 3 – samma månad över tid',season:'Säsong',map:'Karta',method:'Metod & data'};$('pageTitle').innerHTML='<h2>'+titles[page]+'</h2>';
 const isPct=page==='pct',isDelta=page==='delta',isMonths=['m1','m2','m3'].includes(page);
-$('methodPanel').classList.toggle('hidden',page!=='method');$('mapPanel').classList.toggle('hidden',page!=='map');$('seasonPanel').classList.toggle('hidden',page!=='season');['linePanel','barPanel','monthPanel','tablePanel'].forEach(id=>$(id).classList.toggle('hidden',['method','map','season'].includes(page)));if(page==='map'){renderMap(d);return}if(page==='season'){renderSeason();return}if(page==='method')return;
+$('methodPanel').classList.toggle('hidden',page!=='method');$('mapPanel').classList.toggle('hidden',page!=='map');$('seasonPanel').classList.toggle('hidden',page!=='season');['linePanel','barPanel','monthPanel','tablePanel'].forEach(id=>$(id).classList.toggle('hidden',['method','map','season','years'].includes(page)));['multiYearPanel','multiMixPanel','multiChangesPanel'].forEach(id=>$(id).classList.toggle('hidden',page!=='years'));if(page==='map'){renderMap(d);return}if(page==='season'){renderSeason();return}if(page==='years'){renderMultiYears(d);return}if(page==='method')return;
 const xYears=years;let values=xYears.map(y=>byYear.get(y)||0);
 if(isPct||isDelta){const original=years.map(y=>byYear.get(y)||0);values=xYears.map((y,i)=>i===0?null:(isPct?(original[i-1]?100*(original[i]/original[i-1]-1):null):original[i]-original[i-1]));}
 if(page==='m3'){
@@ -372,6 +412,191 @@ function renderSeasonTable(entries){
     };
   });
 }
+// Alluvial flödesdiagram. Each colored band represents one origin country
+// across completed calendar years. This does not represent individual journeys.
+const multiColors=['#23688d','#b44a5e','#d09b40','#537e6f','#8167ad','#488eae','#d27547','#9b6288'];
+const multiPercentage=new Intl.NumberFormat('sv-SE',{minimumFractionDigits:1,maximumFractionDigits:1});
+function renderMultiYearTable(entries){
+  const {key,direction}=multiSort;
+  const collator=new Intl.Collator('sv',{numeric:true,sensitivity:'base'});
+  const ordered=[...entries].sort((a,b)=>{
+    const av=a[key],bv=b[key],missingA=av===null||av===undefined,missingB=bv===null||bv===undefined;
+    if(missingA!==missingB)return missingA?1:-1;
+    const diff=missingA?0:key==='country'?collator.compare(av,bv):av-bv;
+    return diff*(direction==='asc'?1:-1)||collator.compare(a.country,b.country);
+  });
+  const body=$('multiYearTableRows');body.replaceChildren();
+  const formatShare=value=>multiPercentage.format(value)+' %';
+  const formatRank=value=>value===null?'—':fmt(value);
+  for(const row of ordered){
+    const tr=document.createElement('tr');
+    const values=[row.country,formatRank(row.firstRank),formatRank(row.lastRank),row.rankDelta===null?'—':(row.rankDelta>0?'+':'')+fmt(row.rankDelta),formatShare(row.firstShare),formatShare(row.lastShare),(row.pp>0?'+':'')+multiPercentage.format(row.pp),fmt(row.lastGuests)];
+    values.forEach(value=>{const cell=document.createElement('td');cell.textContent=value;tr.append(cell)});
+    body.append(tr);
+  }
+  if(!ordered.length){
+    const tr=document.createElement('tr'),td=document.createElement('td');
+    td.colSpan=8;td.textContent='Inga landuppgifter för jämförelsen.';tr.append(td);body.append(tr);
+  }
+  const columns={country:'Hemland',firstRank:'Plats första året',lastRank:'Plats sista året',rankDelta:'Förändring i placering',firstShare:'Andel första året',lastShare:'Andel sista året',pp:'Förändring (procentenheter)',lastGuests:'Gästnätter sista året'};
+  $('multiYearTable').querySelectorAll('thead th').forEach(th=>{
+    const button=th.querySelector('button'),field=button.dataset.sort,active=field===key;
+    th.setAttribute('aria-sort',active?(direction==='asc'?'ascending':'descending'):'none');
+    button.textContent=columns[field]+(active?(direction==='asc'?' ▲':' ▼'):'');
+    button.onclick=()=>{
+      multiSort=field===multiSort.key?{key:field,direction:multiSort.direction==='asc'?'desc':'asc'}:{key:field,direction:field==='country'||field==='firstRank'||field==='lastRank'?'asc':'desc'};
+      renderMultiYearTable(entries);
+    };
+  });
+}
+function renderMultiYears(selection){
+  const from=+$('from').value,to=+$('to').value;
+  const fullYears=yearSet.filter(y=>y>=from&&y<=to&&fullYear(y,rows));
+  const allowed=new Set(fullYears);
+  const values=selection.filter(r=>allowed.has(r.y));
+  const byYear=new Map(fullYears.map(y=>[y,{total:0,origins:new Map()}]));
+  const grandTotal=new Map();
+  for(const record of values){
+    const recordYear=byYear.get(record.y);
+    recordYear.total+=record.n;
+    recordYear.origins.set(record.c,(recordYear.origins.get(record.c)||0)+record.n);
+    grandTotal.set(record.c,(grandTotal.get(record.c)||0)+record.n);
+  }
+  const allCountries=[...grandTotal].filter(([name,n])=>n>0&&name!=='Ej angivet'&&!name.startsWith('Övriga '))
+    .sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'sv')).map(([name])=>name);
+  const major=allCountries.slice(0,8);
+  const restName='Övriga i urvalet';
+  const majorSet=new Set(major);
+  const rest=fullYears.some(y=>[...byYear.get(y).origins].some(([c,n])=>n>0&&!majorSet.has(c)));
+  const legend=major.map((name,i)=>({name,color:multiColors[i],key:String(i)}));
+  if(rest)legend.push({name:restName,color:'#b6bfcc',key:'other'});
+  const yearsMonth=+$('month').value;
+  $('multiYearNote').textContent=fullYears.length
+    ?'Jämförelsen omfattar '+fullYears[0]+'–'+fullYears.at(-1)+' ('+fullYears.length+' hela kalenderår). '+(yearsMonth?'Endast '+months[yearsMonth].toLocaleLowerCase('sv-SE')+' under dessa år. ':'Hela årets gästnätter. ')+(fullYears.at(-1)<to?'Ofullständiga år, däribland '+to+', är exkluderade. ':'')+'Upp till åtta största hemländer visas separat; övriga samlas i ett grått band. Fördelningen och rankningen gäller det aktiva urvalet.'
+    :'Det finns inga hela kalenderår i valt intervall. Välj ett annat årsintervall.';
+  $('multiTableNote').textContent=fullYears.length>1
+    ?'Plats och andel jämförs mellan '+fullYears[0]+' och '+fullYears.at(-1)+'. Positiva placeringsförändringar betyder att landet har klättrat; andelsförändringen anges i procentenheter. Frånvaro av rapporterade gästnätter ger ingen placering.'
+    :'Välj minst två hela kalenderår för att jämföra placeringar och andelar.';
+  const host=$('multiYearFlow'),legendHost=$('multiYearLegend');host.replaceChildren();legendHost.replaceChildren();
+  if(!fullYears.length||!values.length||fullYears.some(y=>!byYear.get(y).total)){
+    host.textContent='Det finns inte tillräckliga årsuppgifter för att visa flödet.';
+    charts.yearsMix?.destroy();delete charts.yearsMix;
+    renderMultiYearTable([]);
+    return;
+  }
+  const val=(year,c)=>byYear.get(year).origins.get(c)||0;
+  const value=(year,c)=>c===restName?byYear.get(year).total-major.reduce((sum,name)=>sum+val(year,name),0):val(year,c);
+  const percent=(year,c)=>100*value(year,c)/byYear.get(year).total;
+  const yearRanks=new Map(fullYears.map(year=>{
+    const names=allCountries.filter(c=>val(year,c)>0).sort((a,b)=>val(year,b)-val(year,a)||a.localeCompare(b,'sv'));
+    return [year,new Map(names.map((n,i)=>[n,i+1]))];
+  }));
+  const first=fullYears[0],last=fullYears.at(-1);
+  const entries=allCountries.map(name=>{
+    const firstShare=percent(first,name),lastShare=percent(last,name);
+    const firstRank=yearRanks.get(first).get(name)||null,lastRank=yearRanks.get(last).get(name)||null;
+    return {country:name,firstShare,lastShare,pp:lastShare-firstShare,firstRank,lastRank,rankDelta:firstRank!==null&&lastRank!==null?firstRank-lastRank:null,lastGuests:val(last,name)};
+  });
+  renderMultiYearTable(entries);
+  // Same annual composition, now visualized with exactly 100% stacked bars.
+  const datasets=legend.map((entry,i)=>({
+    label:entry.name,
+    data:fullYears.map(y=>percent(y,entry.name)),
+    stack:'shares',backgroundColor:entry.color,borderColor:'#fff',
+    borderWidth:1,borderRadius:0,barPercentage:.88,categoryPercentage:.82,
+    maxBarThickness:50
+  }));
+  chart('yearsMix','bar',fullYears.map(String),datasets,{
+    plugins:{legend:{display:false},tooltip:{callbacks:{
+      label:ctx=>ctx.dataset.label+': '+multiPercentage.format(ctx.parsed.y)+' %',
+      afterLabel:ctx=>fmt(value(fullYears[ctx.dataIndex],ctx.dataset.label))+' gästnätter'
+    }}},
+    scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,min:0,max:100,ticks:{stepSize:20,callback:v=>v+' %'}}}
+  });
+  if(fullYears.length<2){
+    host.textContent='Välj minst två hela kalenderår för flödesdiagrammet.';
+    return;
+  }
+  const width=Math.max(820,fullYears.length*145+80),height=520;
+  const svgNS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(svgNS,'svg');
+  svg.setAttribute('id','multiYearFlowSvg');
+  svg.setAttribute('viewBox','0 0 '+width+' '+height);
+  svg.setAttribute('width',String(width));svg.setAttribute('height',String(height));
+  svg.setAttribute('role','img');
+  svg.setAttribute('aria-label','Flödesdiagram för '+fullYears.length+' hela kalenderår');
+  const el=(tag,attrs={},parent=svg)=>{
+    const node=document.createElementNS(svgNS,tag);
+    for(const [k,v] of Object.entries(attrs))node.setAttribute(k,String(v));
+    parent.append(node);return node;
+  };
+  const title=(parent,text)=>{const t=document.createElementNS(svgNS,'title');t.textContent=text;parent.append(t)};
+  const orderedYears=fullYears.map(year=>{
+    const names=[...major].sort((a,b)=>val(year,b)-val(year,a)||a.localeCompare(b,'sv'));
+    if(rest)names.push(restName);
+    return {year,names};
+  });
+  const chartTop=61,chartBottom=height-45,span=chartBottom-chartTop;
+  const xpos=index=>43+index*(width-96)/(fullYears.length-1);
+  const layout=orderedYears.map(({year,names})=>{
+    const positions=new Map(),gap=3,space=span-(names.length-1)*gap;
+    let y=chartTop;
+    for(const name of names){
+      const size=space*value(year,name)/byYear.get(year).total;
+      positions.set(name,{start:y,end:y+size});
+      y+=size+gap;
+    }
+    return positions;
+  });
+  for(let i=0;i<fullYears.length;i++){
+    const x=xpos(i),year=fullYears[i];
+    el('text',{x,y:28,'text-anchor':'middle','font-size':13,'font-weight':700,fill:'#243953'}).textContent=year;
+    el('text',{x,y:44,'text-anchor':'middle','font-size':10,fill:'#708097'}).textContent=fmt(byYear.get(year).total);
+  }
+  const attrsFor=(key,cls)=>({'data-flow-key':key,class:cls,tabindex:0});
+  const keys=legend.map(e=>e.name);
+  for(let yearIndex=0;yearIndex<fullYears.length-1;yearIndex++){
+    const y1=fullYears[yearIndex],y2=fullYears[yearIndex+1];
+    const x1=xpos(yearIndex)+7,x2=xpos(yearIndex+1)-7,curve=(x2-x1)*.42;
+    for(const item of legend){
+      const n=item.name,p=layout[yearIndex].get(n),q=layout[yearIndex+1].get(n);
+      if(!p||!q||((p.end-p.start)<.15&&(q.end-q.start)<.15))continue;
+      const path=['M',x1,p.start,'C',x1+curve,p.start,x2-curve,q.start,x2,q.start,'L',x2,q.end,
+        'C',x2-curve,q.end,x1+curve,p.end,x1,p.end,'Z'].join(' ');
+      const band=el('path',{d:path,fill:item.color,...attrsFor(item.key,'flow-band')});
+      title(band,n+': '+y1+' '+multiPercentage.format(percent(y1,n))+' % ('+fmt(value(y1,n))+' gästnätter) → '+y2+' '+multiPercentage.format(percent(y2,n))+' % ('+fmt(value(y2,n))+' gästnätter)');
+    }
+  }
+  for(let yearIndex=0;yearIndex<fullYears.length;yearIndex++){
+    const year=fullYears[yearIndex],x=xpos(yearIndex);
+    for(const item of legend){
+      const p=layout[yearIndex].get(item.name),h=p.end-p.start;
+      if(h<=.3)continue;
+      const box=el('rect',{x:x-7,y:p.start,width:14,height:Math.max(.4,h),rx:1.7,fill:item.color,...attrsFor(item.key,'flow-node')});
+      title(box,item.name+' · '+year+': '+fmt(value(year,item.name))+' gästnätter ('+multiPercentage.format(percent(year,item.name))+' %)'+(yearRanks.get(year).has(item.name)?' · plats '+yearRanks.get(year).get(item.name):''));
+    }
+  }
+  host.append(svg);
+  const highlight=key=>{
+    const next=multiActiveCountry===key?null:key;
+    multiActiveCountry=next;
+    svg.querySelectorAll('[data-flow-key]').forEach(node=>node.classList.toggle('flow-faded',next!==null&&node.getAttribute('data-flow-key')!==next));
+    legendHost.querySelectorAll('button').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.flowKey===next)));
+  };
+  for(const item of legend){
+    const button=document.createElement('button');button.type='button';button.dataset.flowKey=item.key;
+    button.setAttribute('aria-pressed','false');
+    const dot=document.createElement('span');dot.className='flow-dot';dot.style.backgroundColor=item.color;
+    const label=document.createElement('span');label.textContent=item.name;
+    button.append(dot,label);button.onclick=()=>highlight(item.key);legendHost.append(button);
+  }
+  svg.querySelectorAll('[data-flow-key]').forEach(node=>{
+    node.addEventListener('click',()=>highlight(node.getAttribute('data-flow-key')));
+    node.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();highlight(node.getAttribute('data-flow-key'))}});
+  });
+  multiActiveCountry=null;
+}
+
 function renderSeason(){
   const from=+$('from').value,to=+$('to').value;
   const complete=yearSet.filter(y=>y>=from&&y<=to&&fullYear(y,rows));
