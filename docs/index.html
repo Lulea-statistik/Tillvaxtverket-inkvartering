@@ -102,6 +102,8 @@ function renderSeason(){
   const data=aggregate(true).filter(r=>included.has(r.y));
   const byLand=new Map();
   data.forEach(r=>{
+    // Unknown origins and aggregate regions must not be presented as countries.
+    if(r.c==='Ej angivet'||r.c.startsWith('Övriga '))return;
     if(!byLand.has(r.c))byLand.set(r.c,{total:0,summer:0,years:new Set()});
     const item=byLand.get(r.c);
     item.total+=r.n;
@@ -121,7 +123,7 @@ function renderSeason(){
   const percentFmt=new Intl.NumberFormat('sv-SE',{minimumFractionDigits:1,maximumFractionDigits:1});
   for(const bin of bins)bin.countries.sort((a,b)=>b.percent-a.percent||a.country.localeCompare(b.country,'sv'));
   $('seasonNote').textContent=complete.length
-    ?'Juni, juli och augusti som andel av samtliga gästnätter för respektive hemland under '+complete[0]+'–'+complete.at(-1)+'. '+complete.length+' hela kalenderår ingår ('+fmt(classified)+' hemlandskategorier). '+(complete.at(-1)<to?'Ofullständiga år, bland annat '+to+', ingår inte. ':'')+'Intervallen bestäms med avrundade heltalsprocent, men tabellen visar en decimal. Länder med få registrerade gästnätter kan få stora procentuella utslag.'
+    ?'Juni, juli och augusti som andel av samtliga gästnätter för respektive hemland under '+complete[0]+'–'+complete.at(-1)+'. '+complete.length+' hela kalenderår ingår ('+fmt(classified)+' hemlandskategorier). '+(complete.at(-1)<to?'Ofullständiga år, bland annat '+to+', ingår inte. ':'')+'Intervallen bestäms med avrundade heltalsprocent, men tabellen visar en decimal. Ej angivet och geografiska samlingskategorier ingår inte. Länder med få registrerade gästnätter kan få stora procentuella utslag.'
     :'Inga hela kalenderår inom valt intervall. Välj ett bredare årsintervall.';
   chart('seasonChart','bar',bins.map(b=>b.label),[{label:'Antal länder',data:bins.map(b=>b.countries.length),backgroundColor:'#2b6a91',borderColor:'#2b6a91'}],{plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'Antal hemländer: '+fmt(ctx.parsed.y)}}}});
   const container=$('seasonGroups');
