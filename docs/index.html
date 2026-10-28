@@ -30,9 +30,9 @@ button,input,select,textarea,table{font-family:var(--font-body)}
 @media(max-width:760px){.panel{padding:16px}.panel h3{font-size:15px}.country-bar-scroll{max-height:500px}}
 
 /* Flödesanalys med interaktivt SVG och en gemensam fördelningspalett. */
-.multi-flow-scroll{overflow-x:auto;max-width:100%;border:1px solid #dce5f0;border-radius:10px;background:linear-gradient(180deg,#fbfdff,#fff);overscroll-behavior-x:contain}
-.multi-flow{min-width:100%;height:530px}
-.multi-flow svg{display:block;height:530px;font-family:'Inter',system-ui,sans-serif}
+.multi-flow-scroll{overflow-x:hidden;width:100%;max-width:100%;border:1px solid #dce5f0;border-radius:10px;background:linear-gradient(180deg,#fbfdff,#fff)}
+.multi-flow{width:100%;min-width:0;height:auto}
+.multi-flow svg{display:block;width:100%;height:auto;max-width:100%;font-family:'Inter',system-ui,sans-serif}
 .multi-flow .flow-band{opacity:.77;transition:opacity .16s ease;cursor:pointer}
 .multi-flow .flow-node{opacity:.97;cursor:pointer}
 .multi-flow .flow-band:hover,.multi-flow .flow-node:hover{opacity:1;filter:brightness(.93)}
@@ -49,7 +49,7 @@ button,input,select,textarea,table{font-family:var(--font-body)}
 #multiYearTable th button:hover{text-decoration:underline}
 #multiYearTable th:not(:first-child),#multiYearTable td:not(:first-child){text-align:right}
 #multiYearTable tbody tr:nth-child(even){background:#f8fafc}
-@media(max-width:760px){.multi-flow,.multi-flow svg{height:485px}.multi-mix-chart{height:360px}}
+@media(max-width:760px){.multi-mix-chart{height:360px}}
 /* Egen blågrön färg för Antalsutveckling, övriga vyer oförändrade. */
 .nav button.active[data-page="delta"]{background:#087d89;color:#fff;border-color:#087d89}
 </style><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script></head><body>
@@ -517,12 +517,15 @@ function renderMultiYears(selection){
     host.textContent='Välj minst två hela kalenderår för flödesdiagrammet.';
     return;
   }
-  const width=Math.max(820,fullYears.length*145+80),height=520;
+  // Compress year columns into one fluid SVG; CSS scales the viewBox to the panel width.
+  const width=Math.min(1120,Math.max(720,fullYears.length*72+60)),height=520;
+  const pixelWidth=Math.max(300,host.clientWidth||900);
+  const yearLabelStep=Math.max(1,Math.ceil(fullYears.length*58/pixelWidth));
   const svgNS='http://www.w3.org/2000/svg';
   const svg=document.createElementNS(svgNS,'svg');
   svg.setAttribute('id','multiYearFlowSvg');
   svg.setAttribute('viewBox','0 0 '+width+' '+height);
-  svg.setAttribute('width',String(width));svg.setAttribute('height',String(height));
+  svg.setAttribute('width','100%');svg.setAttribute('height',String(height));svg.setAttribute('preserveAspectRatio','xMidYMid meet');
   svg.setAttribute('role','img');
   svg.setAttribute('aria-label','Flödesdiagram för '+fullYears.length+' hela kalenderår');
   const el=(tag,attrs={},parent=svg)=>{
@@ -550,8 +553,11 @@ function renderMultiYears(selection){
   });
   for(let i=0;i<fullYears.length;i++){
     const x=xpos(i),year=fullYears[i];
-    el('text',{x,y:28,'text-anchor':'middle','font-size':13,'font-weight':700,fill:'#243953'}).textContent=year;
-    el('text',{x,y:44,'text-anchor':'middle','font-size':10,fill:'#708097'}).textContent=fmt(byYear.get(year).total);
+    // On narrow screens label only selected years, but always include first and last.
+    if(i===0||i===fullYears.length-1||i%yearLabelStep===0){
+      el('text',{x,y:28,'text-anchor':'middle','font-size':13,'font-weight':700,fill:'#243953'}).textContent=year;
+      if(yearLabelStep===1)el('text',{x,y:44,'text-anchor':'middle','font-size':10,fill:'#708097'}).textContent=fmt(byYear.get(year).total);
+    }
   }
   const attrsFor=(key,cls)=>({'data-flow-key':key,class:cls,tabindex:0});
   const keys=legend.map(e=>e.name);
@@ -790,8 +796,8 @@ function renderMap(data){
   $('mapCoverage').textContent='Kartmatchning: '+fmt(geoMatched)+' av '+fmt(total)+' gästnätter ('+(total?percentFmt.format(100*geoMatched/total):'0,0')+' %). Små länder/öar och icke-geografiska kategorier kan saknas i kartan. Vid utvecklingsmått visas bara länder med jämförbara månadsuppgifter.';
 }
 
-function updateCountries(){const old=$('country').value,cont=$('continent').value;const arr=allCountries.filter(c=>!cont||classify(c)===cont).map(c=>[c,c]);options($('country'),[['','Alla länder'],['__EX_SWE__','Alla länder exklusive Sverige'],...arr],arr.some(x=>x[0]===old)?old:'');if(page==='m1')$('month').value=latestMonthInSelection();draw()}
-function reset(){$('mapView').value='sum';$('topFilter').value='0';worldSelectedKey=null;options($('continent'),[['','Alla världsdelar'],...Object.keys(groups).map(x=>[x,x]),['Övriga / ej klassificerade','Övriga / ej klassificerade']],'');options($('country'),[['','Alla länder'],['__EX_SWE__','Alla länder exklusive Sverige'],...allCountries.map(x=>[x,x])],'');$('from').value=yearSet[0];$('to').value=yearSet.at(-1);$('month').value=page==='m1'?latestMonthInSelection():'0';draw()}
+function updateCountries(){const old=$('country').value,cont=$('continent').value;const arr=allCountries.filter(c=>!cont||classify(c)===cont).map(c=>[c,c]);options($('country'),[['','Alla länder'],['__EX_SWE__','Alla länder exklusive Sverige'],...arr],old==='__EX_SWE__'||arr.some(x=>x[0]===old)?old:'');if(page==='m1')$('month').value=latestMonthInSelection();draw()}
+function reset(){$('mapView').value='sum';$('topFilter').value='0';worldSelectedKey=null;options($('continent'),[['','Alla världsdelar'],...Object.keys(groups).map(x=>[x,x]),['Övriga / ej klassificerade','Övriga / ej klassificerade']],'');options($('country'),[['','Alla länder'],['__EX_SWE__','Alla länder exklusive Sverige'],...allCountries.map(x=>[x,x])],'__EX_SWE__');$('from').value=yearSet.includes(2018)?'2018':String(yearSet.find(y=>y>=2018)??yearSet[0]);$('to').value=String(yearSet.at(-1));$('month').value=page==='m1'?latestMonthInSelection():'0';draw()}
 $('mapView').onchange=()=>{if(page==='map')renderMap(aggregate())};document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x===b));page=b.dataset.page;if(page==='m1')$('month').value=latestMonthInSelection();draw()});$('continent').onchange=updateCountries;['country','from','to','month','topFilter'].forEach(id=>$(id).onchange=()=>{if(+$('from').value>+$('to').value){if(id==='from')$('to').value=$('from').value;else $('from').value=$('to').value}if(page==='m1'&&id!=='month')$('month').value=latestMonthInSelection();draw()});$('reset').onclick=reset;
 if(document.fonts?.ready)document.fonts.ready.then(()=>Object.values(charts).forEach(c=>c.update('none')));
 fetch('data/history.csv?v=2').then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.text()}).then(text=>{const lines=text.trim().split(/\r?\n/),head=lines.shift().replace(/^\uFEFF/,'').split(','),ix=k=>head.indexOf(k);rows=lines.map(line=>{const p=line.split(',');return {y:+p[ix('Ar')],m:+p[ix('Manad')],c:p[ix('Hemland')],n:+p[ix('Gastnatter')]}}).filter(r=>r.y&&r.m&&r.c&&Number.isFinite(r.n));const latestPeriod=rows.reduce((latest,row)=>Math.max(latest,row.y*12+row.m),-1);$('headerLatestData').textContent=latestPeriod>0?' - Uppdaterad med statistik för '+months[(latestPeriod-1)%12+1]+' '+Math.floor((latestPeriod-1)/12):'';yearSet=[...new Set(rows.map(r=>r.y))].sort((a,b)=>a-b);allCountries=[...new Set(rows.map(r=>r.c))].sort((a,b)=>a.localeCompare(b,'sv'));options($('from'),yearSet.map(x=>[String(x),String(x)]),String(yearSet[0]));options($('to'),yearSet.map(x=>[String(x),String(x)]),String(yearSet.at(-1)));options($('month'),months.map((x,i)=>[String(i),x]),'0');$('status').classList.add('hidden');$('content').classList.remove('hidden');reset()}).catch(e=>{$('status').textContent='Kunde inte läsa data/history.csv: '+e.message+'. Kontrollera att webbplatsen körs via GitHub Pages.'});
