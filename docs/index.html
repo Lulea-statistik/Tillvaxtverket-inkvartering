@@ -311,9 +311,10 @@ if(isPct||isDelta){
     const previous=byYear.get(years[i-1])||0,now=byYear.get(y)||0;
     return isPct?(previous>0?100*(now/previous-1):null):now-previous;
   });
+  const incomplete=years.filter(y=>!fullYear(y,rows));
   $('partialYearNote').textContent=month
     ?'Förändringen jämför samma kalendermånad med föregående år. År utan uppgifter för den valda månaden visas inte.'
-    :'Årsförändringar jämför enbart kompletta kalenderår. Ofullständiga år, exempelvis '+years.filter(y=>!fullYear(y,rows)).join(', ')+', ingår inte i jämförelsen.';
+    :'Årsförändringar jämför enbart kompletta kalenderår.'+(incomplete.length?' Ofullständiga år ('+incomplete.join(', ')+') ingår inte i jämförelsen.':'');
   $('partialYearNote').classList.remove('hidden');
 }
 if(page==='m3'){
