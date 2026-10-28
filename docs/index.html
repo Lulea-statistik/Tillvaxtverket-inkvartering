@@ -150,7 +150,7 @@ const share=periodGuestNights>0?100*selectedGuestNights/periodGuestNights:NaN;
 const shareFmt=new Intl.NumberFormat('sv-SE',{minimumFractionDigits:1,maximumFractionDigits:share>0&&share<0.1?2:1});
 $('totalShare').textContent='Andel av alla gästnätter i perioden: '+(Number.isFinite(share)?shareFmt.format(share)+' %':'—');
 $('total').textContent=fmt(selectedGuestNights);$('latest').textContent=complete.length?complete.at(-1):'—';$('latestCount').textContent=complete.length?fmt(byYear.get(complete.at(-1))||0)+' gästnätter':'Inget komplett år';$('change').textContent=perc(change);$('numCountries').textContent=fmt(new Set(d.filter(r=>r.n>0).map(r=>r.c)).size);
-$('quality').textContent='Månatlig statistik, senaste perioden kan vara preliminär. '+(yearSet.length?yearSet[0]+'–'+yearSet.at(-1):'okänt')+'.';
+$('quality').textContent='Månatlig statistik, senaste perioden kan vara preliminär. '+$('from').value+'–'+$('to').value+'.';
 const titles={start:'Översikt',year:'Enskilda år',years:'Över flera år',pct:'Procentuell utveckling',delta:'Antalsutveckling',m1:'Månad 1 – säsong',m2:'Månad 2 – månadsjämförelse',m3:'Månad 3 – samma månad över tid',season:'Säsong',map:'Karta',method:'Metod & data'};$('pageTitle').innerHTML='<h2>'+titles[page]+'</h2>';
 const isPct=page==='pct',isDelta=page==='delta',isMonths=['m1','m2','m3'].includes(page);
 $('methodPanel').classList.toggle('hidden',page!=='method');$('mapPanel').classList.toggle('hidden',page!=='map');$('seasonPanel').classList.toggle('hidden',page!=='season');['linePanel','barPanel','monthPanel','tablePanel'].forEach(id=>$(id).classList.toggle('hidden',['method','map','season'].includes(page)));if(page==='map'){renderMap(d);return}if(page==='season'){renderSeason();return}if(page==='method')return;
