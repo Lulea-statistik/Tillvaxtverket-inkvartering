@@ -161,13 +161,20 @@ function renderSeason(){
     :'Inga hela kalenderår inom valt intervall. Välj ett bredare årsintervall.';
   // One horizontal bar for every country, including countries with a zero share.
   const ordered=[...countries].sort((a,b)=>b.percent-a.percent||a.country.localeCompare(b.country,'sv'));
+  const minShare=ordered.length?ordered.at(-1).percent:0;
+  const maxShare=ordered.length?ordered[0].percent:100;
+  const barColors=ordered.map(e=>{
+    const relativeShare=maxShare>minShare?(e.percent-minShare)/(maxShare-minShare):1;
+    const opacity=0.5+0.5*relativeShare;
+    return 'rgba(43,106,145,'+opacity.toFixed(3)+')';
+  });
   const plot=$('seasonChartSize');
   plot.style.height=Math.max(320,ordered.length*27+65)+'px';
-  $('seasonChartNote').textContent='Alla '+fmt(countries.length)+' hemländer visas, sorterade från högsta till lägsta sommarandel. Varje stapel motsvarar ett land på en fast skala från 0 till 100 %. Rulla i diagrammet för att se alla.';
+  $('seasonChartNote').textContent='Alla '+fmt(countries.length)+' hemländer visas, sorterade från högsta till lägsta sommarandel. Varje stapel motsvarar ett land på en fast skala från 0 till 100 %. Staplarnas blå färg går från 50 % opacitet för lägsta sommarandel till 100 % för högsta. Rulla i diagrammet för att se alla.';
   chart('seasonChart','bar',ordered.map(e=>e.country),[{
     label:'Sommarandel (%)',
     data:ordered.map(e=>e.percent),
-    backgroundColor:'#2b6a91',
+    backgroundColor:barColors,
     borderColor:'#205677',
     borderWidth:0,
     borderRadius:2,
