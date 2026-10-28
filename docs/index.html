@@ -38,7 +38,7 @@ button,input,select,textarea,table{font-family:var(--font-body)}
 <div class="notice" id="quality"></div>
 <div class="kpis"><div class="kpi"><small>Gästnätter i urvalet</small><strong id="total">—</strong><span id="totalShare">Andel av samtliga gästnätter under vald period: —</span></div><div class="kpi"><small>Senaste hela år</small><strong id="latest">—</strong><span id="latestCount"></span></div><div class="kpi"><small>Förändring första–sista hela år</small><strong id="change">—</strong><span>Inte ett kausalt mått</span></div><div class="kpi"><small>Hemländer i urvalet</small><strong id="numCountries">—</strong><span>Med registrerade gästnätter</span></div></div>
 <div id="pageTitle"><h2>Översikt</h2></div>
-<div class="grid"><article class="panel wide hidden" id="mapPanel"><h3>Gästnätter i Luleå efter besökarnas hemland</h3><p id="mapDescription" class="mapnote">Färgen visar registrerade gästnätter per hemland i valt tidsintervall. Klicka på ett land för att markera dess gräns och visa värdet.</p><div class="map-view-controls"><label class="field" for="mapView">Visning<select id="mapView"><option value="sum">Summa</option><option value="mean">Medel</option><option value="pct">Procentuell utveckling</option><option value="delta">Antalsutveckling</option></select></label></div><p class="mapnote" id="mapPeriodNote"></p><div id="worldMap"></div><div class="maplegend" id="mapLegend">Färgskala: ljusrosa = färre gästnätter · mörkröd = fler gästnätter.</div><p class="mapnote" id="mapCoverage"></p></article><article class="panel wide" id="linePanel"><h3 id="lineTitle">Utländska gästnätter per år</h3><p id="m3LineNote" class="muted hidden">Äldre år visas i blått med successivt lägre opacitet. Innevarande år visas i svart med extra tjock linje. Saknade månader visas som luckor, inte som noll. Månadsfiltret är avstängt i denna vy.</p><p id="m1MonthNote" class="muted hidden"></p><p id="m2AreaNote" class="muted hidden">Staplat areadiagram med ett färgat område per hemlandskategori: januari–december summerat över valda år. Klicka på ett land nedanför diagrammet för att visa eller dölja det. Månadsfiltret är avstängt i denna vy. Saknade landsuppgifter visas inte som noll.</p><div class="chart"><canvas id="line"></canvas></div><div id="m2Legend" class="m2-legend hidden" aria-label="Visa eller dölj hemländer i diagrammet"></div></article>
+<div class="grid"><article class="panel wide hidden" id="mapPanel"><h3>Gästnätter i Luleå efter besökarnas hemland</h3><p id="mapDescription" class="mapnote">Färgen visar registrerade gästnätter per hemland i valt tidsintervall. Klicka på ett land för att markera dess gräns och visa värdet.</p><div class="map-view-controls"><label class="field" for="mapView">Visning<select id="mapView"><option value="sum">Summa</option><option value="mean">Medel</option><option value="pct">Procentuell utveckling</option><option value="delta">Antalsutveckling</option></select></label></div><p class="mapnote" id="mapPeriodNote"></p><div id="worldMap"></div><div class="maplegend" id="mapLegend">Färgskala: ljusrosa = färre gästnätter · mörkröd = fler gästnätter.</div><p class="mapnote" id="mapCoverage"></p></article><article class="panel wide" id="linePanel"><h3 id="lineTitle">Utländska gästnätter per år</h3><p id="m3LineNote" class="muted hidden">Äldre år visas i blått med successivt lägre opacitet. Innevarande år visas i svart med extra tjock linje. Saknade månader visas som luckor, inte som noll. Månadsfiltret är avstängt i denna vy.</p><p id="m1MonthNote" class="muted hidden"></p><p id="m2AreaNote" class="muted hidden">Staplat areadiagram med ett färgat område per hemlandskategori: januari–december summerat över valda år. Klicka på ett land nedanför diagrammet för att visa eller dölja det. Månadsfiltret är avstängt i denna vy. Saknade landsuppgifter visas inte som noll.</p><p id="partialYearNote" class="muted hidden" role="note"></p><div class="chart"><canvas id="line"></canvas></div><div id="m2Legend" class="m2-legend hidden" aria-label="Visa eller dölj hemländer i diagrammet"></div></article>
 <article class="panel" id="barPanel"><h3 id="barTitle">Största hemländerna</h3><div class="country-bar-scroll"><div class="chart tall" id="countryBarChart"><canvas id="bar"></canvas></div></div></article>
 <article class="panel" id="monthPanel"><h3 id="monthTitle">Säsongsmönster per månad</h3><div class="chart tall"><canvas id="monthly"></canvas></div></article>
 <article class="panel wide" id="tablePanel"><h3>Tabell: urvalets utveckling</h3><div class="scroll"><table><thead><tr><th>År</th><th>Gästnätter</th><th>Förändring mot föregående år</th></tr></thead><tbody id="tbody"></tbody></table></div></article>
@@ -246,7 +246,7 @@ function aggregate(ignoreMonth=false,completeYearsOnly=false){
 }
 function latestMonthInSelection(){const candidates=aggregate(true);const latest=candidates.reduce((last,r)=>Math.max(last,r.y*12+r.m),-1);return latest<0?'0':String((latest-1)%12+1)}
 function renderM2Legend(datasets){const host=$('m2Legend');host.replaceChildren();datasets.forEach((ds,i)=>{const button=document.createElement('button');button.type='button';button.className='m2-legend-item';button.setAttribute('aria-pressed','true');const swatch=document.createElement('span');swatch.className='m2-swatch';swatch.style.backgroundColor=ds.borderColor;const label=document.createElement('span');label.textContent=ds.label;button.append(swatch,label);button.onclick=()=>{const ch=charts.line;if(!ch)return;const visible=ch.isDatasetVisible(i);ch.setDatasetVisibility(i,!visible);ch.update();button.setAttribute('aria-pressed',String(!visible))};host.append(button)});if(!datasets.length)host.textContent='Inga hemlandsuppgifter i urvalet.'}
-function draw(){if(!rows.length)return;if(['m2','m3','season'].includes(page))$('month').value='0';$('month').disabled=['m2','m3','season'].includes(page);$('m3LineNote').classList.toggle('hidden',page!=='m3');$('m2AreaNote').classList.toggle('hidden',page!=='m2');$('m2Legend').classList.toggle('hidden',page!=='m2');$('m1MonthNote').classList.toggle('hidden',page!=='m1');if(page==='m1')$('m1MonthNote').textContent='Förvald månad: '+months[+$('month').value]+'. Utgår från den senaste tillgängliga perioden för valt hemland och årsintervall.';$('linePanel').classList.toggle('m3',page==='m3');$('linePanel').classList.toggle('m2',page==='m2');const d=aggregate(),from=+$('from').value,to=+$('to').value,month=+$('month').value,years=Array.from({length:Math.max(0,to-from+1)},(_,i)=>from+i),byYear=collect(d,r=>r.y),byCountry=Array.from(collect(d,r=>r.c)).sort((a,b)=>b[1]-a[1]),byMonth=collect(d,r=>r.m),complete=years.filter(y=>fullYear(y,rows));const change=complete.length>1&&byYear.get(complete[0])>0?100*((byYear.get(complete.at(-1))||0)/(byYear.get(complete[0]))-1):NaN;
+function draw(){if(!rows.length)return;if(['m2','m3','season'].includes(page))$('month').value='0';$('month').disabled=['m2','m3','season'].includes(page);$('m3LineNote').classList.toggle('hidden',page!=='m3');$('m2AreaNote').classList.toggle('hidden',page!=='m2');$('m2Legend').classList.toggle('hidden',page!=='m2');$('m1MonthNote').classList.toggle('hidden',page!=='m1');$('partialYearNote').classList.add('hidden');if(page==='m1')$('m1MonthNote').textContent='Förvald månad: '+months[+$('month').value]+'. Utgår från den senaste tillgängliga perioden för valt hemland och årsintervall.';$('linePanel').classList.toggle('m3',page==='m3');$('linePanel').classList.toggle('m2',page==='m2');const d=aggregate(),from=+$('from').value,to=+$('to').value,month=+$('month').value,years=Array.from({length:Math.max(0,to-from+1)},(_,i)=>from+i),byYear=collect(d,r=>r.y),byCountry=Array.from(collect(d,r=>r.c)).sort((a,b)=>b[1]-a[1]),byMonth=collect(d,r=>r.m),complete=years.filter(y=>fullYear(y,rows));const change=complete.length>1&&byYear.get(complete[0])>0?100*((byYear.get(complete.at(-1))||0)/(byYear.get(complete[0]))-1):NaN;
 const selectedGuestNights=d.reduce((total,r)=>total+r.n,0);
 // The denominator reflects the same years/month, but deliberately ignores
 // Hemland, världsdel and Topp filters so the share has a stable total.
@@ -287,11 +287,39 @@ if(page==='m3'){
   renderM2Legend(countryAreas);
 }else{
   $('lineTitle').textContent=isPct?'Årlig förändring (%)':isDelta?'Årlig förändring (antal gästnätter)':isMonths?'Gästnätter över tiden':'Gästnätter per år';
+  const currentCalendarYear=new Date().getFullYear();
+  const currentYearIndex=xYears.indexOf(currentCalendarYear);
+  const currentMonths=new Set(d.filter(r=>r.y===currentCalendarYear).map(r=>r.m));
+  const latestCurrentMonth=Math.max(0,...currentMonths);
+  // Only mark an incomplete *annual total*: a filtered single calendar month
+  // is already a comparable month-to-month series and must stay solid.
+  const partialAnnualLine=(page==='start'||page==='years')&&
+    month===0&&currentYearIndex>0&&latestCurrentMonth>0&&
+    !fullYear(currentCalendarYear,rows)&&
+    Number.isFinite(values[currentYearIndex-1])&&Number.isFinite(values[currentYearIndex]);
+  if(partialAnnualLine){
+    const monthName=months[latestCurrentMonth].toLocaleLowerCase('sv-SE');
+    $('partialYearNote').textContent=currentCalendarYear+' är ett pågående år. Uppgifter till och med '+monthName+' '+currentCalendarYear+'. Den streckade linjen mot '+currentCalendarYear+' avser ett ofullständigt år och är inte direkt jämförbar med helåren.';
+    $('partialYearNote').classList.remove('hidden');
+  }
   chart('line',isPct||isDelta?'bar':'line',xYears.map(String),[{
     label:isPct?'Förändring, %':isDelta?'Förändring, antal':'Gästnätter',
     data:values,
-    ...((isPct||isDelta)?{backgroundColor:values.map(v=>v<0?'#bd6674':isDelta?'#087d89':'#356991'),maxBarThickness:32}:{}),
-  }],isPct?{scales:{y:{ticks:{callback:v=>fmt(v)+' %'}}},plugins:{tooltip:{callbacks:{label:ctx=>'Förändring: '+perc(ctx.parsed.y)}}}}:{});
+    ...((isPct||isDelta)?{
+      backgroundColor:values.map(v=>v<0?'#bd6674':isDelta?'#087d89':'#356991'),
+      maxBarThickness:32
+    }:{}),
+    ...(partialAnnualLine?{
+      // Chart.js segment styling makes only the last year-to-year connection dashed;
+      // a single dataset keeps the tooltip and line continuous.
+      segment:{borderDash:ctx=>ctx.p1DataIndex===currentYearIndex?[8,6]:undefined},
+      pointRadius:values.map((_,i)=>i===currentYearIndex?4:2.3),
+      pointBorderWidth:values.map((_,i)=>i===currentYearIndex?2.4:1.8)
+    }:{})
+  }],isPct?{
+    scales:{y:{ticks:{callback:v=>fmt(v)+' %'}}},
+    plugins:{tooltip:{callbacks:{label:ctx=>'Förändring: '+perc(ctx.parsed.y)}}}
+  }:{});
 
 }
 const barLimit=+$('topFilter').value||12,barCountries=byCountry.slice(0,barLimit);$('countryBarChart').style.height=Math.max(430,barCountries.length*30+60)+'px';$('barTitle').textContent='Största hemländerna';chart('bar','bar',barCountries.map(x=>x[0]),[{label:'Gästnätter',data:barCountries.map(x=>x[1]),backgroundColor:barCountries.map((_,i)=>i<3?'#a93752':'#c27486'),maxBarThickness:18}],{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{callback:v=>fmt(v)}},y:{grid:{display:false}}}});
