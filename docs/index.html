@@ -392,7 +392,7 @@ function renderChangePanels(data,years,month,isPct){
   const comparable=years.filter(y=>month?allMonthsPresent.has(y):fullYear(y,rows));
   const eligible=new Set(comparable);
   const countryYears=new Map(),totals=new Map(),municipalTotals=new Map();
-  for(const y of comparable){totals.set(y,0);municipalTotals.set(y,0)}
+  for(const y of comparable){municipalTotals.set(y,0)}
   for(const r of rows){
     if(!eligible.has(r.y)||(month&&r.m!==month))continue;
     municipalTotals.set(r.y,(municipalTotals.get(r.y)||0)+r.n);
