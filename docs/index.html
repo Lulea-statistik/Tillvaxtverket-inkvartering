@@ -24,7 +24,7 @@ button,input,select,textarea,table{font-family:var(--font-body)}
 <div class="notice" id="quality"></div>
 <div class="kpis"><div class="kpi"><small>Gästnätter i urvalet</small><strong id="total">—</strong><span>Summerade utländska gästnätter</span></div><div class="kpi"><small>Senaste hela år</small><strong id="latest">—</strong><span id="latestCount"></span></div><div class="kpi"><small>Förändring första–sista hela år</small><strong id="change">—</strong><span>Inte ett kausalt mått</span></div><div class="kpi"><small>Hemländer i urvalet</small><strong id="numCountries">—</strong><span>Med registrerade gästnätter</span></div></div>
 <div id="pageTitle"><h2>Översikt</h2></div>
-<div class="grid"><article class="panel wide hidden" id="mapPanel"><h3>Gästnätter i Luleå efter besökarnas hemland</h3><p class="mapnote">Färgen visar antal registrerade gästnätter per hemland i valt tidsintervall. Klicka på ett land för mer information. Länder utan matchade uppgifter visas i grått.</p><div id="worldMap"></div><div class="maplegend">Färgskala: ljusrosa = färre gästnätter · mörkröd = fler gästnätter (logaritmisk skala).</div><p class="mapnote" id="mapCoverage"></p></article><article class="panel wide" id="linePanel"><h3 id="lineTitle">Utländska gästnätter per år</h3><p id="m3LineNote" class="muted hidden">Varje färg visar ett kalenderår från januari till december. Saknade månader visas som luckor, inte som noll. Månadsfiltret är avstängt i denna vy.</p><div class="chart"><canvas id="line"></canvas></div></article>
+<div class="grid"><article class="panel wide hidden" id="mapPanel"><h3>Gästnätter i Luleå efter besökarnas hemland</h3><p class="mapnote">Färgen visar antal registrerade gästnätter per hemland i valt tidsintervall. Klicka på ett land för mer information. Länder utan matchade uppgifter visas i grått.</p><div id="worldMap"></div><div class="maplegend">Färgskala: ljusrosa = färre gästnätter · mörkröd = fler gästnätter (logaritmisk skala).</div><p class="mapnote" id="mapCoverage"></p></article><article class="panel wide" id="linePanel"><h3 id="lineTitle">Utländska gästnätter per år</h3><p id="m3LineNote" class="muted hidden">Alla år visas i blått: äldre år är mer transparenta och innevarande år har en extra tjock linje. Saknade månader visas som luckor, inte som noll. Månadsfiltret är avstängt i denna vy.</p><div class="chart"><canvas id="line"></canvas></div></article>
 <article class="panel" id="barPanel"><h3 id="barTitle">Största hemländerna</h3><div class="chart tall"><canvas id="bar"></canvas></div></article>
 <article class="panel" id="monthPanel"><h3 id="monthTitle">Säsongsmönster per månad</h3><div class="chart tall"><canvas id="monthly"></canvas></div></article>
 <article class="panel wide" id="tablePanel"><h3>Tabell: urvalets utveckling</h3><div class="scroll"><table><thead><tr><th>År</th><th>Gästnätter</th><th>Förändring mot föregående år</th></tr></thead><tbody id="tbody"></tbody></table></div></article>
@@ -54,9 +54,13 @@ if(isPct||isDelta){const original=years.map(y=>byYear.get(y)||0);values=xYears.m
 if(page==='m3'){
   const monthlyTotals=collect(d,r=>r.y+'-'+r.m);
   const monthLabels=months.slice(1);
-  const yearLines=years.filter(y=>monthLabels.some((_,i)=>monthlyTotals.has(y+'-'+(i+1)))).map((y,i)=>{
-    const color='hsl('+Math.round((i*137.508)%360)+' 65% 38%)';
-    return {label:String(y),data:monthLabels.map((_,j)=>monthlyTotals.has(y+'-'+(j+1))?monthlyTotals.get(y+'-'+(j+1)):null),borderColor:color,backgroundColor:color,fill:false,spanGaps:false,pointRadius:2,pointHoverRadius:5};
+  const currentYear=new Date().getFullYear();
+  const yearLines=years.filter(y=>monthLabels.some((_,i)=>monthlyTotals.has(y+'-'+(i+1)))).map(y=>{
+    // Same blue hue for all years. Opacity fades with distance from the current calendar year.
+    const age=Math.abs(currentYear-y);
+    const opacity=0.12+0.88*Math.exp(-0.16*age);
+    const color='rgba(32,84,147,'+opacity.toFixed(3)+')';
+    return {label:String(y),data:monthLabels.map((_,j)=>monthlyTotals.has(y+'-'+(j+1))?monthlyTotals.get(y+'-'+(j+1)):null),borderColor:color,backgroundColor:color,borderWidth:y===currentYear?5:2,fill:false,spanGaps:false,pointRadius:y===currentYear?3:2,pointHoverRadius:5};
   });
   $('lineTitle').textContent='Gästnätter per månad – ett år per linje';
   chart('line','line',monthLabels,yearLines,{interaction:{mode:'nearest',intersect:false},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,usePointStyle:true}},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(ctx.parsed.y)}}}});
