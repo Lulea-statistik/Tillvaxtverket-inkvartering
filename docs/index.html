@@ -131,6 +131,32 @@ function fullYear(y,unfiltered){return new Set(unfiltered.filter(r=>r.y===y).map
 function collect(filtered,key){const out=new Map();filtered.forEach(r=>out.set(key(r),(out.get(key(r))||0)+r.n));return out}
 // Uniform visual language for all Chart.js charts; preserve page-specific scales,
 // series colors (Månad 3 / Säsong) and custom tooltips.
+// Value labels on ranking and monthly bars make exact values readable without hover.
+const polishedBarLabels={
+  id:'polishedBarLabels',
+  afterDatasetsDraw(chart,args,options){
+    if(!options.enabled||!chart.data.datasets.length)return;
+    const data=chart.data.datasets[0].data,meta=chart.getDatasetMeta(0);
+    const horizontal=chart.options.indexAxis==='y',ctx=chart.ctx;
+    ctx.save();
+    ctx.fillStyle='#334c69';
+    ctx.font="600 11px 'Inter',system-ui,sans-serif";
+    ctx.textBaseline=horizontal?'middle':'bottom';
+    ctx.textAlign=horizontal?'left':'center';
+    meta.data.forEach((element,i)=>{
+      const value=Number(data[i]);
+      if(!Number.isFinite(value)||value<=0)return;
+      const text=fmt(value);
+      if(horizontal){
+        const x=Math.min(element.x+8,chart.width-ctx.measureText(text).width-8);
+        ctx.fillText(text,x,element.y);
+      }else{
+        ctx.fillText(text,element.x,Math.max(15,element.y-7));
+      }
+    });
+    ctx.restore();
+  }
+};
 function chart(id,type,labels,datasets,extra={}){
   const horizontal=extra.indexAxis==='y';
   const palette=page==='delta'?['#087d89','#2764a6','#8a99b5']:['#ae4059','#356991','#bc914f'];
@@ -143,7 +169,7 @@ function chart(id,type,labels,datasets,extra={}){
   const tickBase={color:'#576980',font:tickFont,padding:10,maxTicksLimit:7};
   const lightGrid={color:'rgba(142,163,188,0.19)',drawTicks:false,lineWidth:1};
   const xBase=horizontal?
-    {beginAtZero:true,grace:id==='bar'?'12%':undefined,grid:lightGrid,border:{display:false},ticks:{...tickBase,callback:v=>fmt(v)}}:
+    {beginAtZero:true,grace:id==='bar'?'22%':undefined,grid:lightGrid,border:{display:false},ticks:{...tickBase,callback:v=>fmt(v)}}:
     {grid:{display:false,drawTicks:false},border:{display:false},ticks:{...tickBase,autoSkip:true,maxRotation:0,maxTicksLimit:12}};
   const yBase=horizontal?
     {grid:{display:false,drawTicks:false},border:{display:false},ticks:{...tickBase,autoSkip:false,font:{...tickFont,size:11.5},callback:function(v){const label=this.getLabelForValue(v);return label.length>28?label.slice(0,27)+'…':label;}}}:
@@ -154,8 +180,9 @@ function chart(id,type,labels,datasets,extra={}){
     devicePixelRatio:Math.min(2.25,Math.max(2,window.devicePixelRatio||1)),
     animation:{duration:220,easing:'easeOutQuart'},
     interaction:{mode:'nearest',intersect:type==='bar'},
-    layout:{padding:{top:12,right:13,bottom:5,left:5}},
+    layout:{padding:{top:12,right:id==='bar'?48:13,bottom:5,left:5}},
     plugins:{
+      polishedBarLabels:{enabled:id==='bar'||id==='monthly'},
       legend:{display:datasets.length>1,position:'bottom',labels:{font:{family:font,size:11.5,weight:'500'},color:'#344a64',boxWidth:13,boxHeight:9,padding:15,usePointStyle:true,pointStyle:'rectRounded'}},
       tooltip:{backgroundColor:'#182942',titleColor:'#ffffff',bodyColor:'#eaf0f8',titleFont:{family:font,size:12,weight:'700'},bodyFont:{family:font,size:12},padding:12,cornerRadius:9,caretSize:6,borderColor:'rgba(190,211,235,.22)',borderWidth:1,displayColors:datasets.length>1,callbacks:{label:ctx=>ctx.dataset.label+': '+fmt(horizontal?ctx.parsed.x:ctx.parsed.y)}}
     },
@@ -196,7 +223,7 @@ function chart(id,type,labels,datasets,extra={}){
       pointBackgroundColor:'#fff',borderCapStyle:'round',borderJoinStyle:'round'
     }),...d
   }));
-  charts[id]=new Chart($(id),{type,data:{labels,datasets:styled},options:opt});
+  charts[id]=new Chart($(id),{type,data:{labels,datasets:styled},options:opt,plugins:[polishedBarLabels]});
 }
 
 // Country ranking uses the selected period and continent independently of Hemland.
